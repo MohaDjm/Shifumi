@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pierre, Feuille, Ciseaux, et Puits</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding-bottom: 3rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #form {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.25rem;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            height: 3rem;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
+
+        #input {
+            border: none;
+            padding: 0 1rem;
+            flex-grow: 1;
+            border-radius: 2rem;
+            margin: 0.25rem;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+
+        #form>button {
+            background: #333;
+            border: none;
+            padding: 0 1rem;
+            margin: 0.25rem;
+            border-radius: 3px;
+            outline: none;
+            color: #fff;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages>li {
+            padding: 0.5rem 1rem;
+        }
+
+        #messages>li:nth-child(odd) {
+            background: #efefef;
+        }
+
+        .choices {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .choices button {
+            margin: 0 10px;
+        }
+
+        .notifications {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #gameStatus {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        #scores {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #error {
+            color: red;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #restartBtn {
+            display: none;
+            margin: 20px auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modal pseudo -->
+    <div class="modal fade" id="pseudoModal" tabindex="-1" role="dialog" aria-labelledby="pseudoModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pseudoModalLabel">Enter Your Pseudo</h5>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="pseudoInput" class="form-control" placeholder="Enter pseudo">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="submitPseudo()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login form -->
+    <div id="loginForm" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <form onsubmit="login(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+    </div>
+
+    <!-- navabr -->
+    <nav class="navbar navbar-expand-lg bg-body-tertiary" style="display: none;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Navbar</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
+                <div class="badge text-bg-danger" id="badge">0</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- notifications -->
+    <div class="notifications" style="display: none;">
+        <div id="connectionNotification"></div>
+    </div>
+
+    <!-- game status -->
+    <div id="gameStatus" style="display: none;">Waiting for players to join...</div>
+
+    <!-- scores -->
+    <div id="scores" style="display: none;">
+        <div id="player1Score">Player 1 Score: 0</div>
+        <div id="player2Score">Player 2 Score: 0</div>
+    </div>
+
+    <!-- choices -->
+    <div class="choices" id="choices" style="display: none;">
+        <button class="btn btn-primary" onclick="makeChoice('Pierre')">Pierre</button>
+        <button class="btn btn-primary" onclick="makeChoice('Feuille')">Feuille</button>
+        <button class="btn btn-primary" onclick="makeChoice('Ciseaux')">Ciseaux</button>
+        <button class="btn btn-primary" onclick="makeChoice('Puits')">Puits</button>
+    </div>
+
+    <!-- messages -->
+    <ul id="messages"></ul>
+    <form id="form" action="" style="display: none;">
+        <input id="input" autocomplete="off" /><button>Send</button>
+    </form>
+
+    <!-- error message -->
+    <div id="error" style="display: none;">This channel is full. Please try another channel.</div>
+
+    <!-- restart button -->
+    <div id="restartBtn" style="display: none;">
+        <button class="btn btn-primary" onclick="restartGame()">Restart Game</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script>
+        const socket = io();
+
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messages = document.getElementById('messages');
+        const badge = document.getElementById('badge');
+        const connectionNotification = document.getElementById('connectionNotification');
+        const choicesDiv = document.getElementById('choices');
+        const gameStatus = document.getElementById('gameStatus');
+        const scoresDiv = document.getElementById('scores');
+        const player1Score = document.getElementById('player1Score');
+        const player2Score = document.getElementById('player2Score');
+        const errorDiv = document.getElementById('error');
+        const restartBtn = document.getElementById('restartBtn');
+        const loginForm = document.getElementById('loginForm');
+        var pseudo = '';
+        var hasPlayed = false;
+
+        function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            }).then(response => response.json()).then(data => {
+                if (data.success) {
+                    loginForm.style.display = 'none';
+                    document.querySelector('.navbar').style.display = 'block';
+                    document.querySelector('.notifications').style.display = 'block';
+                    gameStatus.style.display = 'block';
+                    scoresDiv.style.display = 'block';
+                    form.style.display = 'flex';
+                    socket.emit('SJoin', channelName);
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        const channelName = window.location.pathname.split('/').pop() || 'default';
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value) {
+                socket.emit('SChat', { msg: input.value, channel: channelName, pseudo: pseudo });
+                input.value = '';
+            }
+        });
+
+        function makeChoice(choice) {
+            if (hasPlayed) return;
+            hasPlayed = true;
+            socket.emit('choice', { choice: choice, channel: channelName, pseudo: pseudo });
+            gameStatus.textContent = "You have played. Waiting for the other player...";
+        }
+
+        const a = [];
+
+        socket.on('CChat', (data) => {
+            const item = document.createElement('li');
+
+            if (socket.id === data.id) {
+                item.style.color = 'red';
+            } else {
+                a.push(data.msg);
+                badge.innerHTML = a.length;
+            }
+
+            item.textContent = data.pseudo + " : " + data.msg;
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        socket.on('choice', (data) => {
+            gameStatus.textContent = `${data.pseudo} has made a choice. Waiting for the other player...`;
+        });
+
+        socket.on('result', (data) => {
+            if (data.result === 'Victoire') {
+                gameStatus.textContent = `You win! You chose ${data.choice}, ${data.opponentPseudo} chose ${data.opponentChoice}.`;
+            } else if (data.result === 'Défaite') {
+                gameStatus.textContent = `You lose! You chose ${data.choice}, ${data.opponentPseudo} chose ${data.opponentChoice}.`;
+            } else {
+                gameStatus.textContent = `It's a draw! You both chose ${data.choice}.`;
+            }
+            player1Score.textContent = `${data.pseudo} Score: ${data.score}`;
+            player2Score.textContent = `${data.opponentPseudo} Score: ${data.opponentScore}`;
+            scoresDiv.style.display = 'block';
+            hasPlayed = false;
+        });
+
+        socket.on('gameOver', (data) => {
+            gameStatus.textContent = data.message + " " + data.resultMessage;
+            choicesDiv.style.display = 'none';
+            restartBtn.style.display = 'block';
+        });
+
+        socket.on('gameRestarted', () => {
+            gameStatus.textContent = "Game restarted. Make your choice!";
+            restartBtn.style.display = 'none';
+            choicesDiv.style.display = 'flex';
+            form.style.display = 'flex';
+            messages.innerHTML = '';
+            player1Score.textContent = "Player 1 Score: 0";
+            player2Score.textContent = "Player 2 Score: 0";
+        });
+
+        function restartGame() {
+            socket.emit('restartGame', { channel: channelName });
+        }
+
+        socket.on('connect', () => {
+            connectionNotification.textContent = "Connected to the server.";
+            setTimeout(() => {
+                connectionNotification.textContent = "";
+            }, 2000);
+        });
+
+        socket.on('disconnect', () => {
+            connectionNotification.textContent = "Disconnected from the server.";
+            setTimeout(() => {
+                connectionNotification.textContent = "";
+            }, 2000);
+        });
+
+        socket.on('channelFull', (data) => {
+            errorDiv.style.display = 'block';
+            gameStatus.style.display = 'none';
+            choicesDiv.style.display = 'none';
+            document.querySelector('.navbar-collapse').style.display = 'none';
+            document.querySelector('.notifications').style.display = 'none';
+        });
+
+        $(document).ready(function () {
+            $('#pseudoModal').modal('show');
+            choicesDiv.style.display = 'none';
+        });
+
+        function submitPseudo() {
+            const inputPseudo = document.getElementById('pseudoInput').value;
+            socket.emit('SCheckPseudo', inputPseudo);
+            socket.emit('SListChannels');
+        }
+
+        socket.on('CPseudoStatus', function (status) {
+            if (status === document.getElementById('pseudoInput').value) {
+                $('#pseudoModal').modal('hide');
+                pseudo = status;
+                choicesDiv.style.display = 'flex';
+                gameStatus.textContent = "Make your choice!";
+            } else {
+                alert('Pseudo not accepted, try another one.');
+                document.getElementById('pseudoInput').value = '';
+            }
+        });
+
+        socket.on('CListChannels', function (data) {
+            console.log(data);
+            let ul = document.querySelector('.navbar-nav.me-auto.mb-2.mb-lg-0');
+            ul.innerHTML = '';  // clear previous list items
+            data.forEach(function (item) {
+                let li = document.createElement('li');
+                li.textContent = item;
+                li.classList.add('nav-item');
+                li.classList.add('m-1');
+                ul.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>
